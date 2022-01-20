@@ -30,15 +30,6 @@ class MusicCog(commands.Cog):
 
         return {"source": data["formats"][0]["url"], "title": data["title"]}
 
-    async def play_next(self, ctx):
-        if self.song_queue.empty():
-            await ctx.send("song queue is empty")
-        else:
-            song = self.song_queue.get()
-            url = song["source"]
-            self.voice_channel.play(FFmpegPCMAudio(url, **self.FFMPEG_OPTIONS),
-                                    after=lambda e: self.play_next(ctx))
-
     async def play_music(self, ctx):
         if self.song_queue.empty():
             await ctx.send("song queue is empty")
@@ -46,8 +37,9 @@ class MusicCog(commands.Cog):
             song = self.song_queue.get()
             url = song["source"]
             if not self.voice_channel.is_playing():
+
                 self.voice_channel.play(FFmpegPCMAudio(url, **self.FFMPEG_OPTIONS),
-                                        after=lambda e: self.play_next(ctx))
+                                        after=lambda e: self.play_music(ctx))
                 self.voice_channel.is_playing()
                 await ctx.send(f"Bot is playing now {song['title']} ")
             else:
