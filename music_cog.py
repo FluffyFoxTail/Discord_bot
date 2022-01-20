@@ -2,74 +2,123 @@ from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio
 from youtube_dl import YoutubeDL
-
+import queue
 
 # make func to getting query and returning URL and title
 # use try for catching mistakes with moving between channels
 # func for playing song from URL
+# make queue for song and stop/resume/skip fun
 
-### Next step
-## make queue for song and stop/resume/skip func
+# Next step
+# catching all possible mistakes
+
 
 class MusicCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True'}
+        self.voice_channel = ""
+        # self.is_playing = False  it might be helpful
+        self.song_queue = queue.Queue()
+        self.YDL_OPTIONS = {"format": "bestaudio", "noplaylist": "True"}
         self.FFMPEG_OPTIONS = {
-            'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
+            "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
 
-    def seacrh_yt(self, query):
+    # add check mistakes when going downloading
+    def search_yt(self, query):
         with YoutubeDL(self.YDL_OPTIONS) as ytdl:
             data = ytdl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
 
-        return {'source': data['formats'][0]['url'], 'title': data['title']}
+        return {"source": data["formats"][0]["url"], "title": data["title"]}
 
-    async def play_music(self, ctx, song):
-        voice = get(self.bot.voice_clients, guild=ctx.guild)
-        url = song["source"]
-        if not voice.is_playing():
-            voice.play(FFmpegPCMAudio(url, **self.FFMPEG_OPTIONS))
-            voice.is_playing()
-            await ctx.send('Bot is playing')
+    async def play_next(self, ctx):
+        if self.song_queue.empty():
+            await ctx.send("song queue is empty")
         else:
-            await ctx.send("Bot is already playing")
-    #Move command
+            song = self.song_queue.get()
+            url = song["source"]
+            self.voice_channel.play(FFmpegPCMAudio(url, **self.FFMPEG_OPTIONS),
+                                    after=lambda e: self.play_next(ctx))
+
+    async def play_music(self, ctx):
+        if self.song_queue.empty():
+            await ctx.send("song queue is empty")
+        else:
+            song = self.song_queue.get()
+            url = song["source"]
+            if not self.voice_channel.is_playing():
+                self.voice_channel.play(FFmpegPCMAudio(url, **self.FFMPEG_OPTIONS),
+                                        after=lambda e: self.play_next(ctx))
+                self.voice_channel.is_playing()
+                await ctx.send(f"Bot is playing now {song['title']} ")
+            else:
+                await ctx.send("Bot is already playing")
+
+    # Move command
     @commands.command()
-    async def join(self, ctx,):
+    async def join(self, ctx, ):
+        """Joins a voice channel"""
+
         try:
             channel = ctx.message.author.voice.channel
         except AttributeError:
             return await ctx.send("Your not in VC")
 
-        voice = get(self.bot.voice_clients, guild=ctx.guild)
-        if voice and voice.is_connected():
-            await voice.move_to(channel)
+        voice_channel = get(self.bot.voice_clients, guild=ctx.guild)
+        if voice_channel and voice_channel.is_connected():
+            await voice_channel.move_to(channel)
+            self.voice_channel = get(self.bot.voice_clients, guild=ctx.guild)
         else:
             await channel.connect()
+            self.voice_channel = get(self.bot.voice_clients, guild=ctx.guild)
 
     @commands.command()
     async def leave(self, ctx):
-        voice = get(self.bot.voice_clients, guild=ctx.guild)
+        """Disconnect bot from voice"""
+
         try:
             channel = ctx.message.author.voice.channel
-            if (voice.is_connected()) and (voice.channel == channel):
-                await voice.disconnect()
+            if (self.voice_channel.is_connected()) and (self.voice_channel.channel == channel):
+                await self.voice_channel.disconnect()
             else:
                 await ctx.send("The bot is not connected to you voice channel.")
         except AttributeError:
             await ctx.send("The bot is not connected to a voice channel.")
 
-    # Playnig command
+    # Playing command
     @commands.command()
-    async def play(self, ctx, *args):
-        query = " ".join(args)
-        voice_channel = ctx.author.voice.channel
-        if voice_channel is None:
+    async def play(self, ctx):
+        """Start play song from self.song_queue"""
+
+        channel = ctx.author.voice.channel
+        if channel is None:
             await ctx.send("You need to be in voice_channel")
+        await self.play_music(ctx)
 
-        song = self.seacrh_yt(query)
-        await self.play_music(ctx, song)
+    @commands.command()
+    async def add(self, ctx, *args):
+        """Add song in self.song_queue"""
 
+        query = " ".join(args)
+        song = self.search_yt(query)
+        self.song_queue.put(song)
+        await ctx.send(f"{song['title']} was added in song queue")
 
+    @commands.command()
+    async def skip(self, ctx):
+        if self.voice_channel:
+            self.voice_channel.stop()
+            await self.play_music(ctx)
 
+    @commands.command()
+    async def resume(self, ctx):
+        if not self.voice_channel.is_playing():
+            self.voice_channel.resume()
+        else:
+            await ctx.send("Bot did not stop anything before")
 
+    @commands.command()
+    async def pause(self, ctx):
+        if self.voice_channel.is_playing():
+            self.voice_channel.pause()
+        else:
+            await ctx.send("Bot did not playing anything now")
