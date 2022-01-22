@@ -1,19 +1,18 @@
-import os
 from discord.ext import commands
-from dotenv import load_dotenv
 from music_cog import MusicCog
+from config import Config
 
-
-bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"),
+bot = commands.Bot(command_prefix=commands.when_mentioned_or(Config.PREFIX),
                    description='Relatively simple music bot example')
+
+
 # for test
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user} ({bot.user.id})")
     print("----------")
 
-load_dotenv()
-bot.add_cog(MusicCog(bot))
-token = os.environ.get("TOKEN")
-bot.run(token)
 
+if __name__ == "__main__":
+    bot.add_cog(MusicCog(bot))
+    bot.run(Config.TOKEN)

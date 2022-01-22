@@ -4,14 +4,6 @@ from discord import FFmpegPCMAudio
 from youtube_dl import YoutubeDL
 import queue
 
-# make func to getting query and returning URL and title
-# use try for catching mistakes with moving between channels
-# func for playing song from URL
-# make queue for song and stop/resume/skip fun
-
-# Next step
-# catching all possible mistakes
-
 
 class MusicCog(commands.Cog):
     def __init__(self, bot):
