@@ -1,6 +1,8 @@
 from discord.ext import commands
-from music_cog import MusicCog
+
 from config import Config
+from music_cog import MusicCog
+from system_cog import SystemCog
 
 bot = commands.Bot(command_prefix=commands.when_mentioned_or(Config.PREFIX),
                    description='Relatively simple music bot example')
@@ -15,4 +17,5 @@ async def on_ready():
 
 if __name__ == "__main__":
     bot.add_cog(MusicCog(bot))
+    bot.add_cog(SystemCog(bot))
     bot.run(Config.TOKEN)
