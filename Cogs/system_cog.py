@@ -2,19 +2,19 @@ import discord
 from discord.ext import commands
 
 
-async def can_clear_chat(ctx):
-    for role in ctx.author.roles:
-        if role.permissions.manage_messages:
-            return True
-
-
-async def can_ban_members(ctx):
+async def _can_ban_members(ctx):
     for role in ctx.author.roles:
         if role.permissions.ban_members:
             return True
 
 
-async def handle_command_error(ctx, error):
+async def _can_clear_chat(ctx):
+    for role in ctx.author.roles:
+        if role.permissions.manage_messages:
+            return True
+
+
+async def _handle_command_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
         return await ctx.send('You haven`t permission use this command')
 
@@ -24,7 +24,7 @@ class SystemCog(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    @commands.check(can_clear_chat)
+    @commands.check(_can_clear_chat)
     async def clear(self, ctx, amount=1):
         """Command that delete messages from text channel"""
         deleted = await ctx.channel.purge(limit=amount + 1)
@@ -32,10 +32,10 @@ class SystemCog(commands.Cog):
 
     @clear.error
     async def clear_error(self, ctx, error):
-        await handle_command_error(ctx, error)
+        await _handle_command_error(ctx, error)
 
     @commands.command()
-    @commands.check(can_ban_members)
+    @commands.check(_can_ban_members)
     async def kick(self, ctx, member: discord.Member, *, reason=None):
         """Command that kick user from server"""
         await member.kick(reason=reason)
@@ -43,10 +43,10 @@ class SystemCog(commands.Cog):
 
     @kick.error
     async def kick_error(self, ctx, error):
-        await handle_command_error(ctx, error)
+        await _handle_command_error(ctx, error)
 
     @commands.command()
-    @commands.check(can_ban_members)
+    @commands.check(_can_ban_members)
     async def ban(self, ctx, member: discord.Member, *, reason=None):
         """Command that gives user permanent ban from server"""
         await member.ban(reason=reason)
@@ -54,10 +54,10 @@ class SystemCog(commands.Cog):
 
     @ban.error
     async def ban_error(self, ctx, error):
-        await handle_command_error(ctx, error)
+        await _handle_command_error(ctx, error)
 
     @commands.command()
-    @commands.check(can_ban_members)
+    @commands.check(_can_ban_members)
     async def unban(self, ctx, *, member: str):
         """Command that removes the ban on server from the user"""
         user_name, user_discriminator = member.split('#')
@@ -73,4 +73,4 @@ class SystemCog(commands.Cog):
 
     @unban.error
     async def unban_error(self, ctx, error):
-        await handle_command_error(ctx, error)
+        await _handle_command_error(ctx, error)
