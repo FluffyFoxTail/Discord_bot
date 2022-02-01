@@ -27,10 +27,3 @@ python -m pip install -r requirements.txt
 ```
 Also you need have installed **ffmpeg**
 
-## ToDo:
-
-- Queue for songs +
-- Add logger
-- Deploy on server, may be with Docker
-- Add system Cog for Mute/Ban/Unban server members
-- add folder for Cogs
